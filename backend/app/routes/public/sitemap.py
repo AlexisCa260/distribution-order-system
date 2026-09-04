@@ -44,6 +44,17 @@ STATIC_PAGES = [
 ]
 
 
+def _to_date(value) -> str:
+    """Convierte datetime, date o string ISO a string de fecha YYYY-MM-DD."""
+    if value is None:
+        return date.today().isoformat()
+    if isinstance(value, str):
+        return value[:10]
+    if hasattr(value, "date"):
+        return value.date().isoformat()
+    return str(value)[:10]
+
+
 def _url(loc: str, lastmod: str, changefreq: str, priority: str) -> str:
     return (
         f"  <url>\n"
@@ -72,13 +83,7 @@ def dynamic_sitemap(db: Session = Depends(get_db)):
         .all()
     )
     for p in products:
-        lastmod = (
-            p.updated_at.date().isoformat()
-            if p.updated_at
-            else p.created_at.date().isoformat()
-            if p.created_at
-            else today
-        )
+        lastmod = _to_date(p.updated_at or p.created_at)
         entries.append(_url(f"/productos/{p.id}", lastmod, "weekly", "0.8"))
 
     # ── Categorías activas → /products/categoria/{id} ────────────────────
@@ -89,11 +94,7 @@ def dynamic_sitemap(db: Session = Depends(get_db)):
         .all()
     )
     for c in categories:
-        lastmod = (
-            c.updated_at.date().isoformat()
-            if c.updated_at
-            else today
-        )
+        lastmod = _to_date(getattr(c, "updated_at", None))
         entries.append(_url(f"/products/categoria/{c.id}", lastmod, "weekly", "0.75"))
 
     # ── Recetas estáticas → /recetas/{slug} ───────────────────────────────
